@@ -1,0 +1,11 @@
+DOG,P001,Buddy,3,Medium,Healthy,Friendly golden retriever\, loves to play fetch.,true,Golden Retriever
+DOG,P002,Max,2,Large,Healthy,Energetic German Shepherd\, good with kids.,true,German Shepherd
+CAT,P003,Luna,1,Small,Healthy,Calm and affectionate cat\, litter trained.,true,true
+CAT,P004,Oliver,4,Medium,Needs dental care,Senior cat\, loves to nap in sunny spots.,true,true
+DOG,P005,Charlie,5,Large,Healthy,Loyal Labrador Retriever\, great with families.,true,Labrador Retriever
+CAT,P006,Milo,2,Small,Healthy,Playful kitten\, loves toys.,true,false
+DOG,P007,Rocky,6,Medium,Healthy,Strong and protective Rottweiler\, needs experienced owner.,true,Rottweiler
+CAT,P008,Bella,3,Medium,Healthy,Affectionate cat\, good with other pets.,true,true
+DOG,P009,Daisy,4,Small,Healthy,Sweet Beagle\, loves to sniff around.,true,Beagle
+CAT,P010,Lucy,5,Medium,Healthy,Independent cat\, enjoys quiet environments.,true,false
+DOG,P011,erha,2,Small,Healthy,,true,
