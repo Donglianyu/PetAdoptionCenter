@@ -4,6 +4,7 @@ import manager.PetDataManager;
 import manager.ApplicationManager;
 import model.*;
 import model.AdoptionApplication.ApplicationStatus;
+import util.SecurityUtil;
 
 import java.io.*;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -110,6 +111,19 @@ public class FileHandler {
         }
     }
 
+    // Create a backup of the existing file (filename.bak) before replacing it
+    private static void createBackupIfExists(File targetFile) {
+        try {
+            if (targetFile.exists()) {
+                Path src = targetFile.toPath();
+                Path bak = new File(targetFile.getAbsolutePath() + ".bak").toPath();
+                Files.copy(src, bak, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            logError("Failed to create backup for " + targetFile.getAbsolutePath() + ": " + e.getMessage());
+        }
+    }
+
     // Load all data
     public static void loadAllData(PetDataManager petManager, ApplicationManager appManager,
                                    List<User> userList, Map<String, Adopter> adopterMap) {
@@ -207,7 +221,8 @@ public class FileHandler {
                 writer.newLine();
             }
             writer.flush();
-            // Atomic replace — use replaceFileAtomically for reliable cross-platform replacement
+            // create backup then atomic replace — use replaceFileAtomically for reliable cross-platform replacement
+            createBackupIfExists(file);
             try {
                 replaceFileAtomically(tempFile, file);
             } catch (IOException e) {
@@ -234,17 +249,24 @@ public class FileHandler {
                 if (parts.size() < 5) continue;
 
                 String role = parts.get(0);
+                // parts.get(4) is stored password (may be plain or hashed). Ensure in-memory password is hashed.
+                String rawPass = parts.get(4);
+                String storedPass = rawPass;
+                if (!SecurityUtil.looksLikeSHA256Hex(rawPass)) {
+                    // upgrade plaintext password to hashed value in memory
+                    storedPass = SecurityUtil.hashSHA256(rawPass);
+                }
                 if ("ADOPTER".equals(role) && parts.size() >= 7) {
                     String homeEnv = "null".equals(parts.get(5)) ? null : parts.get(5);
                     Adopter adopter = new Adopter(
-                        parts.get(1), parts.get(2), parts.get(3), parts.get(4), homeEnv,
+                        parts.get(1), parts.get(2), parts.get(3), storedPass, homeEnv,
                         Boolean.parseBoolean(parts.get(6))
                     );
                     userList.add(adopter);
                     adopterMap.put(adopter.getUserId(), adopter);
                 } else if ("STAFF".equals(role) && parts.size() >= 7) {
                     Staff staff = new Staff(
-                        parts.get(1), parts.get(2), parts.get(3), parts.get(4), parts.get(5), parts.get(6)
+                        parts.get(1), parts.get(2), parts.get(3), storedPass, parts.get(5), parts.get(6)
                     );
                     userList.add(staff);
                 }
@@ -260,10 +282,10 @@ public class FileHandler {
 
     private static void createDefaultUsers(List<User> userList, Map<String, Adopter> adopterMap) {
         // Create default staff
-        Staff staff = new Staff("staff1", "Admin Staff", "555-0000", "123", "Administration", "Senior");
+        Staff staff = new Staff("staff1", "Admin Staff", "555-0000", SecurityUtil.hashSHA256("123"), "Administration", "Senior");
         userList.add(staff);
         // Create default adopter
-        Adopter adopter = new Adopter("adopter1", "William Qin", "555-1234", "123", "Apartment with balcony", false);
+        Adopter adopter = new Adopter("adopter1", "William Qin", "555-1234", SecurityUtil.hashSHA256("123"), "Apartment with balcony", false);
         userList.add(adopter);
         adopterMap.put(adopter.getUserId(), adopter);
 
@@ -301,6 +323,8 @@ public class FileHandler {
                 writer.newLine();
             }
             writer.flush();
+            // create backup then replace
+            createBackupIfExists(file);
             try {
                 replaceFileAtomically(tempFile, file);
             } catch (IOException e) {
@@ -374,6 +398,7 @@ public class FileHandler {
                 writer.newLine();
             }
             writer.flush();
+            createBackupIfExists(file);
             try {
                 replaceFileAtomically(tempFile, file);
             } catch (IOException e) {
@@ -420,6 +445,7 @@ public class FileHandler {
                 }
             }
             writer.flush();
+            createBackupIfExists(file);
             try {
                 replaceFileAtomically(tempFile, file);
             } catch (IOException e) {

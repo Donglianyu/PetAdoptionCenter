@@ -25,8 +25,8 @@ public class Main {
         // ApplicationManager: holds adoption applications
         // userList: list of users loaded from storage
         // adopterMap: map of adopterId -> Adopter for quick lookup
-        PetDataManager petManager = new PetDataManager();
-        ApplicationManager appManager = new ApplicationManager();
+        PetDataManager petManager = PetDataManager.getInstance();
+        ApplicationManager appManager = ApplicationManager.getInstance();
         List<User> userList = new ArrayList<>();
         Map<String, Adopter> adopterMap = new HashMap<>();
 

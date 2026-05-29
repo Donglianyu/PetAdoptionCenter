@@ -15,9 +15,19 @@ public class ApplicationManager implements Manageable<AdoptionApplication> {
     private List<AdoptionApplication> applicationList;
     private Map<String, AdoptionApplication> applicationIdMap;
 
-    public ApplicationManager() {
+    // Singleton instance
+    private static ApplicationManager instance;
+
+    private ApplicationManager() {
         applicationList = new ArrayList<>();
         applicationIdMap = new HashMap<>();
+    }
+
+    public static synchronized ApplicationManager getInstance() {
+        if (instance == null) {
+            instance = new ApplicationManager();
+        }
+        return instance;
     }
 
     @Override

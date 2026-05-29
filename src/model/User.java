@@ -1,8 +1,12 @@
 package model;
 
+import util.SecurityUtil;
 import javax.swing.*;
 import java.io.Serializable;
 
+/**
+ * Base user class. Passwords are expected to be stored as SHA-256 hex strings.
+ */
 public abstract class User implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -31,7 +35,9 @@ public abstract class User implements Serializable {
 
     // Validate password
     public boolean validatePassword(String inputPassword) {
-        return this.password.equals(inputPassword);
+        if (this.password == null) return false;
+        String hashedInput = SecurityUtil.hashSHA256(inputPassword);
+        return this.password.equals(hashedInput);
     }
 
     // Getters and Setters

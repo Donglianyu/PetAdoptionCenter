@@ -15,9 +15,19 @@ public class PetDataManager implements Manageable<Pet> {
     private List<Pet> petList;
     private Map<String, Pet> petIdMap;
 
-    public PetDataManager() {
+    // Singleton instance
+    private static PetDataManager instance;
+
+    private PetDataManager() {
         petList = new ArrayList<>();
         petIdMap = new HashMap<>();
+    }
+
+    public static synchronized PetDataManager getInstance() {
+        if (instance == null) {
+            instance = new PetDataManager();
+        }
+        return instance;
     }
 
     @Override

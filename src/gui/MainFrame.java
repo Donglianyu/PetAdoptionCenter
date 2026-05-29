@@ -10,6 +10,7 @@ import model.*;
 import model.AdoptionApplication.ApplicationStatus;
 import exception.*;
 import util.*;
+import util.SecurityUtil;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -72,6 +73,110 @@ public class MainFrame extends JFrame {
                         userList, adopterMap);
             }
         });
+    }
+
+    private void showRegistrationDialog() {
+        JDialog dialog = new JDialog(this, "User Registration", true);
+        dialog.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5,5,5,5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int row = 0;
+        gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("User ID:"), gbc);
+        gbc.gridx = 1; JTextField idField = new JTextField(15); dialog.add(idField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Name:"), gbc);
+        gbc.gridx = 1; JTextField nameField = new JTextField(15); dialog.add(nameField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Contact (phone/email):"), gbc);
+        gbc.gridx = 1; JTextField contactField = new JTextField(15); dialog.add(contactField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Password:"), gbc);
+        gbc.gridx = 1; JPasswordField passField = new JPasswordField(15); dialog.add(passField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Register as:"), gbc);
+        gbc.gridx = 1; JPanel rolePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JRadioButton adopterRadio = new JRadioButton("Adopter", true);
+        JRadioButton staffRadio = new JRadioButton("Staff");
+        ButtonGroup bg = new ButtonGroup(); bg.add(adopterRadio); bg.add(staffRadio);
+        rolePanel.add(adopterRadio); rolePanel.add(staffRadio); dialog.add(rolePanel, gbc);
+
+        // Adopter-specific
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Home Environment:"), gbc);
+        gbc.gridx = 1; JTextArea homeArea = new JTextArea(3,15); JScrollPane homeScroll = new JScrollPane(homeArea);
+        dialog.add(homeScroll, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Has other pets:"), gbc);
+        gbc.gridx = 1; JCheckBox hasOtherPets = new JCheckBox(); dialog.add(hasOtherPets, gbc);
+
+        // Staff-specific
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Department (staff):"), gbc);
+        gbc.gridx = 1; JTextField deptField = new JTextField(15); dialog.add(deptField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; dialog.add(new JLabel("Staff Level (staff):"), gbc);
+        gbc.gridx = 1; JTextField levelField = new JTextField(15); dialog.add(levelField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
+        JButton submit = new JButton("Register"); dialog.add(submit, gbc);
+
+        submit.addActionListener(e -> {
+            String id = idField.getText().trim();
+            String name = nameField.getText().trim();
+            String contact = contactField.getText().trim();
+            String password = new String(passField.getPassword()).trim();
+            boolean isAdopter = adopterRadio.isSelected();
+
+            if (id.isEmpty() || name.isEmpty() || contact.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Please fill in required fields.", "Registration Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            // unique user id
+            for (User u : userList) {
+                if (u.getUserId().equals(id)) {
+                    JOptionPane.showMessageDialog(dialog, "User ID already exists.", "Registration Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            // contact validation: simple phone or email check
+            boolean contactOk = contact.matches("^\\+?\\d{7,15}$") || contact.matches("^.+@.+\\..+$");
+            if (!contactOk) {
+                JOptionPane.showMessageDialog(dialog, "Contact must be a phone number or email.", "Registration Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String hashed = SecurityUtil.hashSHA256(password);
+
+            if (isAdopter) {
+                String home = homeArea.getText().trim();
+                if (home.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Home environment description is required for adopters.", "Registration Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                Adopter a = new Adopter(id, name, contact, hashed, home, hasOtherPets.isSelected());
+                userList.add(a);
+                adopterMap.put(a.getUserId(), a);
+            } else {
+                // staff registration: mark staff level/department - real systems would require admin approval
+                String dept = deptField.getText().trim();
+                String lvl = levelField.getText().trim();
+                if (dept.isEmpty()) dept = "Pending";
+                if (lvl.isEmpty()) lvl = "Pending";
+                Staff s = new Staff(id, name, contact, hashed, dept, lvl);
+                userList.add(s);
+                JOptionPane.showMessageDialog(dialog, "Staff account created. Admin approval may be required.");
+            }
+
+            // persist users
+            FileHandler.saveUsers(userList);
+            JOptionPane.showMessageDialog(dialog, "Registration successful. You can now log in.");
+            dialog.dispose();
+        });
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void initComponents() {
@@ -167,8 +272,10 @@ public class MainFrame extends JFrame {
          JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
          buttonPanel.setOpaque(false);
         JButton loginButton = new JButton("Login");
+        JButton registerButton = new JButton("Register");
         JButton exitButton = new JButton("Exit");
         buttonPanel.add(loginButton);
+        buttonPanel.add(registerButton);
         buttonPanel.add(exitButton);
         loginPanel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -188,6 +295,8 @@ public class MainFrame extends JFrame {
 
         // Action handlers
         exitButton.addActionListener(e -> System.exit(0));
+
+        registerButton.addActionListener(e -> showRegistrationDialog());
 
         Runnable doLogin = () -> {
             String userId = userIdField.getText().trim();
@@ -885,6 +994,10 @@ public class MainFrame extends JFrame {
             }
             String name = nameField.getText().trim();
             int age = (int) ageSpinner.getValue();
+            if (age <= 0) {
+                JOptionPane.showMessageDialog(dialog, "Age must be a positive integer.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
             String size = (String) sizeCombo.getSelectedItem();
             String health = healthField.getText().trim();
             String desc = descArea.getText().trim();
@@ -975,12 +1088,19 @@ public class MainFrame extends JFrame {
                 String appId = (String) appTableModel.getValueAt(row, 0);
                 String reason = JOptionPane.showInputDialog(this, "Enter rejection reason:");
                 if (reason != null) {
-                    try {
-                        appManager.rejectApplication(appId, SessionContext.getCurrentUser().getUserId(), reason);
-                        updateStatus("Application " + appId + " rejected. Reason: " + reason);
-                        refreshApps.run();
-                    } catch (InvalidApplicationStatusException ex) {
-                        JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    if (reason.trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "Rejection reason cannot be empty.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to reject this application?", "Confirm Rejection", JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        try {
+                            appManager.rejectApplication(appId, SessionContext.getCurrentUser().getUserId(), reason);
+                            updateStatus("Application " + appId + " rejected. Reason: " + reason);
+                            refreshApps.run();
+                        } catch (InvalidApplicationStatusException ex) {
+                            JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
                     }
                 }
             }
